@@ -1,0 +1,8 @@
+*.cbp
+*.depend
+*.layout
+*.lc1
+*.png
+*.tmp
+bin
+obj
