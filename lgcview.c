@@ -8,11 +8,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static GLint scene_x = 0;
-static GLint scene_y = 0;
+static GLfloat scene_x = 0;
+static GLfloat scene_y = 0;
 
 static int scene_scale_x = 0;
 static int scene_scale_y = 0;
+
+static GLfloat scene_scale = 1;
 
 static int grid = 1;
 
@@ -44,8 +46,8 @@ void eventloop() {
     }
 }
 
-#define SCENE_MOVEMENT_SPEED 8
-#define SCENE_SCALING_SPEED 5
+#define SCENE_MOVEMENT_SPEED (-8.0*scene_scale)
+#define SCENE_SCALING_SPEED 0.95
 
 void kpress_logic() {
 
@@ -60,12 +62,10 @@ void kpress_logic() {
 
     // Zoom
     if(keyst[SDLK_i]) {
-        scene_scale_x -= SCENE_SCALING_SPEED;
-        scene_scale_y -= SCENE_SCALING_SPEED;
+        scene_scale /= SCENE_SCALING_SPEED;
     }
     if(keyst[SDLK_o]) {
-        scene_scale_x += SCENE_SCALING_SPEED;
-        scene_scale_y += SCENE_SCALING_SPEED;
+        scene_scale *= SCENE_SCALING_SPEED;
     }
 
     // Grid toggling
@@ -116,6 +116,9 @@ int init(uint16_t w, uint16_t h) {
     glEnable(GL_TEXTURE_2D);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
+
+    scene_x -= w/2;
+    scene_y -= h/2;
 
     return 0;
 }
@@ -172,46 +175,42 @@ imagepack_t *imgload(const char *filename) {
 void draw_grid() {
 
     glLoadIdentity();
-    glTranslatef(scene_x, scene_y, 0);
+    glTranslatef(scene_x/scene_scale+SDL_GetVideoSurface()->w/2,
+        scene_y/scene_scale+SDL_GetVideoSurface()->h/2, 0);
 
     glColor3f(0, 0, 0.5);
+
+    glBegin(GL_LINES);
+
     GLint i;
     for(i = -1024; i <= 1024; i += 32) {
 
-        glBegin(GL_LINES);
+        glVertex3f(i/scene_scale, -1024/scene_scale, -1);
+        glVertex3f(i/scene_scale, 1024/scene_scale, -1);
 
-        glVertex3i(i, -1024, -1);
-        glVertex3i(i, 1024, -1);
-
-        glVertex3i(-1024, i, -1);
-        glVertex3i(1024, i, -1);
-
-        glEnd();
+        glVertex3f(-1024/scene_scale, i/scene_scale, -1);
+        glVertex3f(1024/scene_scale, i/scene_scale, -1);
 
     }
 
     glColor3f(0, 0.25, 1);
     for(i = -1024; i <= 1024; i += 512) {
-        glBegin(GL_LINES);
 
-        glVertex3i(i, -1024, -1);
-        glVertex3i(i, 1024, -1);
+        glVertex3f(i/scene_scale, -1024/scene_scale, -1);
+        glVertex3f(i/scene_scale, 1024/scene_scale, -1);
 
-        glVertex3i(-1024, i, -1);
-        glVertex3i(1024, i, -1);
-
-        glEnd();
+        glVertex3f(-1024/scene_scale, i/scene_scale, -1);
+        glVertex3f(1024/scene_scale, i/scene_scale, -1);
 
     }
 
     glColor3f(1, 1, 1);
-    glBegin(GL_LINES);
 
-    glVertex3i(0, -1024, -1);
-    glVertex3i(0, 1024, -1);
+    glVertex3f(0/scene_scale, -1024/scene_scale, -1);
+    glVertex3f(0/scene_scale, 1024/scene_scale, -1);
 
-    glVertex3i(-1024, 0, -1);
-    glVertex3i(1024, 0, -1);
+    glVertex3f(-1024/scene_scale, 0/scene_scale, -1);
+    glVertex3f(1024/scene_scale, 0/scene_scale, -1);
 
     glEnd();
 
@@ -228,19 +227,19 @@ void draw_images(imagepack_t *pk) {
         glEnable(GL_TEXTURE_2D);
 
         glLoadIdentity();
-        glTranslatef(pk->srcimg->layers[i].x+scene_x,
-            pk->srcimg->layers[i].y+scene_y,0);
+        glTranslatef((pk->srcimg->layers[i].x+scene_x)/scene_scale+SDL_GetVideoSurface()->w/2,
+            (pk->srcimg->layers[i].y+scene_y)/scene_scale+SDL_GetVideoSurface()->h/2,0);
 
         glBegin(GL_QUADS);
 
         glTexCoord2f(0, 0);
-        glVertex3f(0, 0, (GLfloat)i/(GLfloat)DISTANCE_DIV);
+        glVertex4f(0, 0, (GLfloat)i/(GLfloat)DISTANCE_DIV, scene_scale);
         glTexCoord2f(0, 1);
-        glVertex3f(0, pk->srcimg->layers[i].h, (GLfloat)i/(GLfloat)DISTANCE_DIV);
+        glVertex4f(0, pk->srcimg->layers[i].h, (GLfloat)i/(GLfloat)DISTANCE_DIV, scene_scale);
         glTexCoord2f(1, 1);
-        glVertex3f(pk->srcimg->layers[i].w,pk->srcimg->layers[i].h, (GLfloat)i/(GLfloat)DISTANCE_DIV);
+        glVertex4f(pk->srcimg->layers[i].w,pk->srcimg->layers[i].h, (GLfloat)i/(GLfloat)DISTANCE_DIV, scene_scale);
         glTexCoord2f(1, 0);
-        glVertex3f(pk->srcimg->layers[i].w, 0, (GLfloat)i/(GLfloat)DISTANCE_DIV);
+        glVertex4f(pk->srcimg->layers[i].w, 0, (GLfloat)i/(GLfloat)DISTANCE_DIV, scene_scale);
 
         glEnd();
 
@@ -263,8 +262,6 @@ int main(int argc, char *argv[]) {
         kpress_logic();
 
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-        projection_reset();
 
         if(grid) draw_grid();
         draw_images(pk);
