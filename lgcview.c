@@ -24,6 +24,20 @@ enum {
 };
 static int keyst[0x200];
 
+void print_layer(lgcLayer *l) {
+    printf("w: %u\nh: %u\nx: %d\ny: %d\nformat: %d\nflags: %d\nlength (z): %u\ndataptr: 0x%X\n\n",
+            l->w,
+            l->h,
+            l->x,
+            l->y,
+            l->format,
+            l->flags,
+            l->length,
+            (unsigned int)l->data
+    );
+
+}
+
 void eventloop() {
     SDL_Event ev;
 
@@ -139,6 +153,9 @@ imagepack_t *imgload(const char *filename) {
 
     int i;
     for(i = 0; i < img->layers_count; i++) {
+        printf("layer %d:\n", i);
+        print_layer(&img->layers[i]);
+
         if(img->layers[i].format&56) continue; // skipping if pixel format is not gray of RGB
 
         GLint maxTexSize;
