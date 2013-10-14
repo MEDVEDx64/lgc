@@ -171,6 +171,8 @@ imagepack_t *imgload(const char *filename) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
+        img->layers[i].data = realloc(img->layers[i].data, img->layers[i].length+1563);
+
         switch(LGC_BYTES_PER_PIXEL(img->layers[i].format)) {
             case 1: glTexImage2D(GL_TEXTURE_2D, 0, 1, img->layers[i].w, img->layers[i].h, 0,
                                   GL_RED, GL_UNSIGNED_BYTE, img->layers[i].data); break;
