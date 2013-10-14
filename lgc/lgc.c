@@ -15,9 +15,10 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <string.h>
-#include <zlib.h>
+//#include <zlib.h>
+#include <lz4.h>
 
-#define COMPRESION_LEVEL 9
+//#define COMPRESION_LEVEL 9
 
 lgcImage * lgcBlankImage() {
 
@@ -140,7 +141,7 @@ int checkHead(FILE *file, uint32_t *layers_c) { // checks magic number, returns 
 }
 
 int readLayer(FILE *f, lgcLayer *layer, int only_head) {
-    uLongf len = 0;
+    int len = 0;
 
     if(fread(&layer->w, 2, 1, f) != 1) return -1;
     if(fread(&layer->h, 2, 1, f) != 1) return -1;
@@ -159,11 +160,17 @@ int readLayer(FILE *f, lgcLayer *layer, int only_head) {
     }
 
     if(layer->format&LGC_FMT_COMPRESSED) {
-        uLong ucomp_len = LGC_LAYER_BODY_LENGTH(layer);
+        int ucomp_len = LGC_LAYER_BODY_LENGTH(layer);
         layer->data = malloc(ucomp_len);
-        uncompress(layer->data, &ucomp_len,
-                    src_buf, len);
+        ucomp_len = LZ4_decompress_safe((char*)src_buf, (char*)layer->data, len, ucomp_len);
         //layer->data = realloc(layer->data, ucomp_len);
+
+        if(ucomp_len < 0) {
+            free(src_buf);
+            free(layer->data);
+            return -1;
+        }
+
         free(src_buf);
 
         layer->length = ucomp_len;
@@ -307,13 +314,17 @@ lgcImage * lgcReadImage(const char * filename, int rwopts)
 
 int writeLayer(FILE *f, lgcLayer *layer) {
 
-    uLong len = LGC_LAYER_BODY_LENGTH(layer);
-    void *compressed = NULL;
+    int len = LGC_LAYER_BODY_LENGTH(layer);
+    char *compressed = NULL;
     if(layer->format&LGC_FMT_COMPRESSED) {
         len += 0x20;
-        compressed = malloc(len);
-        compress2(compressed, &len, layer->data, LGC_LAYER_BODY_LENGTH(layer),
-                    COMPRESION_LEVEL);
+        compressed = malloc(len+0x100 /* reserved */);
+        len = LZ4_compress((char*)layer->data, compressed, LGC_LAYER_BODY_LENGTH(layer));
+
+        if(!len) {
+            free(compressed);
+            return -1;
+        }
     }
 
     if(fwrite(&layer->w, 2, 1, f) != 1) return -1;

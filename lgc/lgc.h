@@ -4,7 +4,7 @@
 /* lgc.h */
 
 #define LGC_VERSION_MAJOR   0
-#define LGC_VERSION_MINOR   2
+#define LGC_VERSION_MINOR   3
 #define LGC_VERSION_MICRO   0
 
 /**
@@ -60,7 +60,7 @@
 */
 
 #define LGC_BASE_OFFSET 0x20
-#define LGC_MAGIC 0x100006ef
+#define LGC_MAGIC 0x100006ff
 
 #include <stdint.h>
 
