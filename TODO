@@ -1,3 +1,0 @@
-fix the following in lgc.c:
-  - data length validity check in read-from-file operations;
-  - compress2() return value check.
